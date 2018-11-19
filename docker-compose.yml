@@ -1,0 +1,36 @@
+version: '3'
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    restart: on-failure
+  segment:
+    build: segment
+    depends_on:
+      - redis
+    ports:
+      - "${PROXY_PORT:-8080}:${PROXY_PORT:-8080}"
+    links:
+      - redis
+    volumes:
+      - /tmp:/opt/segment_app/logs
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - CACHE_TTL=${CACHE_TTL:-15}
+      - CACHE_SIZE=${CACHE_SIZE:-3}
+      - PROXY_PORT=${PROXY_PORT:-8080}
+      - WORKERS=${WORKERS:-1}
+    restart: on-failure
+  tests:
+    build: tests
+    depends_on:
+      - segment
+    links:
+      - segment
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - CACHE_TTL=${CACHE_TTL:-15}
+      - PROXY_HOST=${PROXY_HOST:-segment}
+      - PROXY_PORT=${PROXY_PORT:-8080}
+    restart: on-failure
